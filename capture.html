@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="theme-color" content="#04101c">
+<title data-t="cap.title">Оживи свою рыбку!</title>
+<style>
+  :root {
+    --ink: #eaf6ff;
+    --muted: #8aa6bd;
+    --accent: #58d6ff;
+    --ok: #4ade80;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: linear-gradient(180deg, #06263f 0%, #04101c 100%);
+    color: var(--ink);
+    font: 16px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 18px 40px;
+    text-align: center;
+  }
+  h1 { font-size: 26px; margin: 8px 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 26px; }
+
+  /* Внутри меню аквариума страница живёт как врезка: своя подложка и своя
+     ссылка «назад» там лишние — их даёт карточка меню. */
+  body.embed { background: none; padding: 4px 14px 20px; }
+  body.embed h1 { font-size: 20px; }
+  body.embed .back { display: none; }
+
+  /* Съёмка — тупиковый экран: без этой ссылки вернуться к аквариуму
+     можно только кнопкой «назад» в браузере. */
+  .back {
+    position: fixed; top: 12px; left: 12px; z-index: 5;
+    color: var(--muted); text-decoration: none; font-size: 13px;
+    background: rgba(4, 16, 28, 0.72); border: 1px solid rgba(140, 200, 255, 0.18);
+    border-radius: 999px; padding: 8px 14px;
+  }
+  .back:active { color: var(--ink); }
+
+  .screen { display: none; width: 100%; max-width: 440px; }
+  .screen.on { display: block; }
+
+  .big {
+    display: block; width: 100%;
+    font: inherit; font-size: 19px; font-weight: 600;
+    color: #04101c; background: var(--accent);
+    border: 0; border-radius: 18px;
+    padding: 18px 20px; margin: 14px 0 0;
+    cursor: pointer;
+  }
+  .big:active { transform: translateY(1px); filter: brightness(1.1); }
+  .big.green { background: var(--ok); }
+  .big.ghost {
+    background: transparent; color: var(--muted);
+    border: 1.5px solid rgba(140, 200, 255, 0.3);
+    font-weight: 500;
+  }
+  input[type=file] { display: none; }
+  .sublink {
+    display: inline-block;
+    color: var(--accent);
+    font-size: 14px;
+    margin-top: 14px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .sublink:hover { color: #fff; }
+
+  .bubble { font-size: 64px; margin: 10px 0; }
+  .fishname { font-size: 20px; font-weight: 600; margin: 14px 0 2px; }
+
+  .preview {
+    width: 100%; border-radius: 16px; margin-top: 10px;
+    border: 1px solid rgba(140, 200, 255, 0.25);
+    background: #0a2233;
+  }
+  .stage3d {
+    width: 100%; aspect-ratio: 4 / 3; margin-top: 10px;
+    border-radius: 16px; overflow: hidden; position: relative;
+    border: 1px solid rgba(140, 200, 255, 0.25);
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(88, 214, 255, 0.25) 0%, transparent 55%),
+      linear-gradient(180deg, #0d4a6b 0%, #04101c 100%);
+  }
+  .stage3d canvas { display: block; width: 100%; height: 100%; }
+  .stage3d .spin3d {
+    position: absolute; inset: 0; display: grid; place-content: center;
+    color: var(--muted); font-size: 13px;
+  }
+
+  /* «Ярче цвета»: светлый карандаш подкручивается прямо на превью,
+     до выпуска. Ползунок — единственная ручка, детям хватает одной. */
+  .boostrow {
+    display: flex; align-items: center; gap: 12px;
+    margin: 14px 2px 0; text-align: left;
+  }
+  .boostrow label { flex: none; color: var(--muted); font-size: 14px; }
+  .boostrow input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+
+  .spin {
+    width: 44px; height: 44px; margin: 30px auto 12px;
+    border: 4px solid rgba(140, 200, 255, 0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .err {
+    background: rgba(255, 100, 100, 0.12);
+    border: 1px solid rgba(255, 120, 120, 0.4);
+    border-radius: 14px; padding: 14px 16px;
+    color: #ffc9c9; font-size: 14px; margin-top: 16px;
+    text-align: left;
+  }
+  .hintline { color: var(--muted); font-size: 13px; margin-top: 22px; }
+
+  .livewrap {
+    position: relative; border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(140, 200, 255, 0.25); background: #000;
+  }
+  .livewrap video { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; }
+  .livehint {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 12px;
+    text-align: center; font-size: 13px; color: #fff;
+    background: linear-gradient(0deg, rgba(0,0,0,.6), transparent);
+  }
+  .petname {
+    display: block; width: 100%; margin-top: 10px; padding: 12px 14px;
+    border-radius: 12px; border: 1px solid rgba(140, 200, 255, 0.3);
+    background: rgba(255,255,255,0.06); color: var(--ink); font: inherit;
+    box-sizing: border-box;
+  }
+  .petname::placeholder { color: var(--muted); }
+
+  /* Мост на телефон для больших экранов: выбор файла на компьютере — тупик,
+     а камера всегда в кармане. Белая подложка обязательна: без неё сканер
+     не видит код на тёмном. */
+  .qrrow {
+    display: flex; align-items: center; gap: 14px; text-align: left;
+    margin: 26px auto 0; max-width: 400px;
+    border-top: 1px solid rgba(140, 200, 255, 0.18); padding-top: 20px;
+  }
+  .qrrow .qrbox {
+    flex: none; line-height: 0;
+    background: #fff; border-radius: 10px; padding: 7px;
+  }
+  .qrrow .qrbox svg { display: block; width: 96px; height: 96px; }
+  .qrrow .qrtext { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<a class="back" id="back" data-t="cap.back"></a>
+
+<h1 data-t="cap.title"></h1>
+<p class="sub" data-t="cap.sub"></p>
+
+<!-- старт -->
+<div class="screen on" id="s-start">
+  <div class="bubble">📷</div>
+  <button class="big green" id="b-live" data-t="cap.live" type="button"></button>
+  <label class="big ghost" for="file" id="b-file-label" data-t="cap.shoot"></label>
+  <input type="file" id="file" accept="image/*" capture="environment">
+  <div>
+    <label class="sublink" for="file-gallery" id="b-gallery-label" data-t="cap.gallery"></label>
+    <input type="file" id="file-gallery" accept="image/*">
+  </div>
+  <p class="hintline" data-t="cap.hint"></p>
+  <div class="qrrow" id="qrrow" hidden>
+    <span class="qrbox" id="cap-qr"></span>
+    <span class="qrtext" data-t="cap.qr"></span>
+  </div>
+</div>
+
+<!-- живой автозахват -->
+<div class="screen" id="s-live">
+  <div class="livewrap">
+    <video id="live-video" playsinline muted autoplay></video>
+    <div class="livehint" id="live-hint" data-t="cap.live.hint"></div>
+  </div>
+  <button class="big ghost" id="b-live-cancel" data-t="cap.cancel"></button>
+</div>
+
+<!-- обработка -->
+<div class="screen" id="s-busy">
+  <div class="spin"></div>
+  <p id="busy-text" data-t="cap.searching"></p>
+</div>
+
+<!-- превью -->
+<div class="screen" id="s-preview">
+  <p class="fishname" id="p-name"></p>
+  <div class="stage3d" id="stage3d"><div class="spin3d" id="spin3d" data-t="cap.reviving"></div></div>
+  <img class="preview" id="p-img" data-t-alt="cap.photo" hidden>
+  <input type="text" id="p-petname" class="petname" maxlength="24" data-t-ph="cap.namePlaceholder">
+  <div class="boostrow">
+    <label for="boost" data-t="cap.boost"></label>
+    <input type="range" id="boost" min="0" max="100" value="0">
+  </div>
+  <button class="big green" id="b-release" data-t="cap.release"></button>
+  <label class="big ghost" for="file" data-t="cap.retake"></label>
+</div>
+
+<!-- готово -->
+<div class="screen" id="s-done">
+  <div class="bubble">🎉</div>
+  <p class="fishname" data-t="cap.done"></p>
+  <p class="sub" id="done-sub" data-t="cap.done.sub"></p>
+  <label class="big" for="file" data-t="cap.again"></label>
+</div>
+
+<!-- ошибка -->
+<div class="screen" id="s-error">
+  <div class="bubble">🙈</div>
+  <div class="err" id="err-text"></div>
+  <button class="big green" id="b-err-live" data-t="cap.live" type="button"></button>
+  <label class="big ghost" for="file" id="b-err-shoot" data-t="cap.shoot"></label>
+  <div>
+    <label class="sublink" for="file-gallery" id="b-err-gallery" data-t="cap.gallery"></label>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "/vendor/three.webgpu.min.js",
+    "three/webgpu": "/vendor/three.webgpu.min.js",
+    "three/tsl": "/vendor/three.tsl.min.js"
+  }
+}
+</script>
+<script type="module" src="/assets/three-bootstrap.js"></script>
+<script type="module" src="/assets/i18n.js"></script>
+<script type="module" src="/vendor/qr.js"></script>
+<!-- three-addons-bootstrap.js публикует и SkeletonUtils/DRACOLoader — тут не
+     нужны, но GLTFLoader нужен, поэтому импортируем его отдельно, не таща
+     на эту страницу лишний draco/roomenv код, которого capture.html не ждёт -->
+<script type="module">
+  import { GLTFLoader } from '/vendor/GLTFLoader.webgpu.js';
+  window.THREE.GLTFLoader = GLTFLoader;
+</script>
+<!-- до fish-glb.js: он спрашивает у FishFrame оси и голову, иначе половина
+     покупных рыб в превью развернётся хвостом вперёд -->
+<script type="module" src="/assets/fish-frame.js"></script>
+<script type="module" src="/assets/fish-glb.js"></script>
+<script type="module" src="/assets/capture.js"></script>
+<script type="module" src="/assets/tank.js"></script>
+<script type="module">
+(function () {
+  'use strict';
+
+  // Снимать не в какой-то абстрактный аквариум, а в конкретный: адрес
+  // страницы /t/<id>/capture говорит, в чей именно уплывёт рыбка.
+  if (!Tank.id) { location.replace('/'); return; }
+
+  document.getElementById('back').href = Tank.url;
+
+  // Страница открыта внутри меню аквариума — убираем всё, что там повторяется.
+  var EMBED = new URLSearchParams(location.search).has('embed');
+  if (EMBED) document.body.classList.add('embed');
+
+  // На устройстве без тача «Сфотографировать лист» открывает выбор файла —
+  // тупик: камера у человека в кармане. Показываем мост: QR прямо на эту
+  // страницу, телефон наводится и снимает там.
+  function updateCapQr(baseUrl) {
+    if (!matchMedia('(pointer: coarse)').matches) {
+      try {
+        var fn = window.qrcode || (typeof qrcode !== 'undefined' ? qrcode : null);
+        if (!fn) return;
+        var qr = fn(0, 'M');
+        qr.addData(baseUrl + Tank.url + '/capture');
+        qr.make();
+        document.getElementById('cap-qr').innerHTML = qr.createSvgTag(4, 0);
+        document.getElementById('qrrow').hidden = false;
+      } catch (e) { /* без QR кнопка выбора файла всё равно работает */ }
+    }
+  }
+
+  updateCapQr(location.origin);
+  fetch('/api/network').then(function (r) { return r.json(); }).then(function (info) {
+    if (info && info.preferredUrl && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      updateCapQr(info.preferredUrl);
+    }
+  }).catch(function () {});
+
+
+  var inFrame = EMBED && window.parent !== window;
+
+  function tell(msg) {
+    if (!inFrame) return;
+    try { window.parent.postMessage(msg, location.origin); } catch (e) { /* не критично */ }
+  }
+
+  // Аквариум за окном показывает рыбку сразу, не дожидаясь своего опроса.
+  function tellTank() { tell({ aqua: 'fish-added' }); }
+
+  // Экраны съёмки разной высоты — от кнопки до превью с 3D. Врезка не умеет
+  // подстраиваться сама, поэтому свою высоту она сообщает наружу.
+  // Открытое окно подтверждения бывает выше содержимого страницы — тогда
+  // врезке нужна его высота, иначе окно срежется по краям.
+  function frameHeight() {
+    return Math.max(document.body.scrollHeight,
+      (window.Modal && Modal.height && Modal.height()) || 0);
+  }
+
+  function tellHeight() { tell({ aqua: 'height', height: frameHeight() }); }
+
+  if (inFrame) {
+    if (window.ResizeObserver) new ResizeObserver(tellHeight).observe(document.body);
+    addEventListener('load', tellHeight);
+    tellHeight();
+
+    // Аквариум не «на большом экране», а прямо за этим окном.
+    var doneSub = document.getElementById('done-sub');
+    doneSub.setAttribute('data-t', 'cap.done.sub.embed');
+    doneSub.textContent = I18N.t('cap.done.sub.embed');
+
+    // Меню открывает съёмку заново — начинать надо с камеры, а не с того
+    // экрана, на котором ушли. Врезка живёт между открытиями, сама она
+    // об этом не узнает, поэтому её будят снаружи.
+    addEventListener('message', function (e) {
+      if (e.origin !== location.origin || !e.data) return;
+      if (e.data.aqua === 'reset') {
+        result = null;
+        show('s-start');
+        tellHeight();
+      }
+    });
+  }
+
+  var manifest = null;
+  var result = null;
+
+  // ── 3D-предпросмотр: рыбка с раскраской ребёнка виляет хвостом ───────────
+  var P3 = { ready: false, renderer: null, scene: null, camera: null, mesh: null, geos: {}, raf: 0 };
+
+  async function init3D() {
+    if (P3.ready) return true;
+    if (!window.THREE || !window.FishGLB) return false;
+    try {
+      // WebGPURenderer, а не WebGLRenderer: addBend() у не-скелетных моделей
+      // теперь TSL positionNode, который классический GLSL-движок не поймёт.
+      P3.renderer = new THREE.WebGPURenderer({
+        antialias: true, alpha: true,
+        forceWebGL: !window.__aquaSupportsWebGPU
+      });
+      await P3.renderer.init();
+    } catch (e) { return false; }
+    P3.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25));
+    P3.renderer.outputColorSpace = THREE.SRGBColorSpace;   // раньше renderer.outputEncoding = THREE.sRGBEncoding
+    document.getElementById('stage3d').appendChild(P3.renderer.domElement);
+    P3.scene = new THREE.Scene();
+    P3.camera = new THREE.PerspectiveCamera(42, 4 / 3, 0.1, 50);
+    P3.camera.position.set(0, 0.4, 3.1);
+    P3.camera.lookAt(0, 0, 0);
+    P3.scene.add(new THREE.HemisphereLight(0xbfe4ff, 0x1a3550, 0.95));
+    var dir = new THREE.DirectionalLight(0xffffff, 1.1);
+    dir.position.set(2, 4, 3);
+    P3.scene.add(dir);
+    P3.ready = true;
+    return true;
+  }
+
+  // Геометрия вида с планарной UV бокового силуэта — та же рамка,
+  // по которой capture.js кадрирует текстуру. Кэш по виду.
+  function fishGeo(kind, cb) {
+    if (P3.geos[kind]) return cb(P3.geos[kind]);
+    var fish = null;
+    manifest.fish.forEach(function (f) { if (f.name === kind) fish = f; });
+    if (!fish) return cb(null);
+    var spec = { url: fish.model, length: 2.4 };
+    FishGLB.load([spec], function () {
+      if (!spec.gltf) return cb(null);
+      var geo = FishGLB.bake(spec);
+      geo.computeBoundingBox();
+      var bb = geo.boundingBox;
+      var sz = Math.max(bb.max.z - bb.min.z, 1e-6), sy = Math.max(bb.max.y - bb.min.y, 1e-6);
+      var p = geo.attributes.position;
+      var uv = new Float32Array(p.count * 2);
+      for (var i = 0; i < p.count; i++) {
+        uv[i * 2] = (p.getZ(i) - bb.min.z) / sz;
+        uv[i * 2 + 1] = (p.getY(i) - bb.min.y) / sy;
+      }
+      geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      geo.userData.range = [bb.min.z, bb.max.z];
+      P3.geos[kind] = geo;
+      cb(geo);
+    });
+  }
+
+  async function show3D(kind) {
+    var flat = document.getElementById('p-img');
+    var spin = document.getElementById('spin3d');
+    spin.style.display = '';
+    if (!(await init3D())) {
+      document.getElementById('stage3d').style.display = 'none';
+      flat.hidden = false;
+      flat.src = result.preview;
+      return;
+    }
+    fishGeo(kind, function (geo) {
+      if (!geo) {
+        document.getElementById('stage3d').style.display = 'none';
+        flat.hidden = false;
+        flat.src = result.preview;
+        return;
+      }
+      if (P3.mesh) {
+        P3.scene.remove(P3.mesh);
+        if (P3.mesh.material.map) P3.mesh.material.map.dispose();
+        P3.mesh.material.dispose();
+      }
+      // Текстура прямо из канваса, а не через dataURL: ползунок «Ярче цвета»
+      // перерисовывает канвас, и рыбке хватает needsUpdate — без PNG.
+      var tex = new THREE.CanvasTexture(result.boost.texCanvas);
+      tex.colorSpace = THREE.SRGBColorSpace;   // раньше tex.encoding = THREE.sRGBEncoding
+      var mat = new THREE.MeshStandardMaterial({
+        map: tex, roughness: 0.5, metalness: 0.05, side: THREE.DoubleSide
+      });
+      mat = FishGLB.addBend(mat, {
+        bodyMask: new THREE.Vector3(0, 0, 1),
+        latMask: new THREE.Vector3(1, 0, 0),
+        range: geo.userData.range,
+        headAtMax: true
+      }, 0.4, Math.random() * 6.28);
+      P3.mesh = new THREE.Mesh(geo, mat);
+      P3.scene.add(P3.mesh);
+      spin.style.display = 'none';
+      startLoop();
+    });
+  }
+
+  function startLoop() {
+    cancelAnimationFrame(P3.raf);
+    var t0 = performance.now();
+    function frame(now) {
+      P3.raf = requestAnimationFrame(frame);
+      var box = document.getElementById('stage3d');
+      if (!box.offsetParent) return;   // экран превью скрыт
+      var w = box.clientWidth, h = box.clientHeight;
+      var el = P3.renderer.domElement;
+      if (el.clientWidth !== w || el.clientHeight !== h) {
+        P3.renderer.setSize(w, h, false);
+        P3.camera.aspect = w / h;
+        P3.camera.updateProjectionMatrix();
+      }
+      var t = (now - t0) / 1000;
+      FishGLB.uTime.value = t;
+      if (P3.mesh) {
+        // боком к зрителю, с лёгким поворотом туда-сюда
+        P3.mesh.rotation.y = Math.PI / 2 + Math.sin(t * 0.5) * 0.55;
+        P3.mesh.position.y = Math.sin(t * 0.9) * 0.07;
+      }
+      P3.renderer.render(P3.scene, P3.camera);
+    }
+    P3.raf = requestAnimationFrame(frame);
+  }
+
+  function stopLoop() {
+    if (P3.raf) {
+      cancelAnimationFrame(P3.raf);
+      P3.raf = 0;
+    }
+  }
+
+  function show(id) {
+    if (id !== 's-preview') stopLoop();
+    document.querySelectorAll('.screen').forEach(function (s) { s.classList.remove('on'); });
+    document.getElementById(id).classList.add('on');
+  }
+
+  fetch('/assets/coloring/manifest.json')
+    .then(function (r) { return r.json(); })
+    .then(function (m) { manifest = m; })
+    .catch(function () {
+      show('s-error');
+      document.getElementById('err-text').textContent = I18N.t('cap.err.manifest');
+    });
+
+  // Быстрое чтение размеров JPEG и PNG из заголовка файла без полного декодирования растра
+  function readHeaderSize(file) {
+    return new Promise(function (resolve) {
+      if (!file || !file.slice) return resolve(null);
+      var reader = new FileReader();
+      var slice = file.slice(0, 262144);
+      reader.onload = function () {
+        try {
+          var view = new DataView(reader.result);
+          // PNG: 0x89504E47
+          if (view.byteLength > 24 && view.getUint32(0) === 0x89504E47) {
+            return resolve({ w: view.getUint32(16), h: view.getUint32(20) });
+          }
+          // JPEG: 0xFFD8
+          if (view.byteLength > 4 && view.getUint16(0) === 0xFFD8) {
+            var offset = 2;
+            while (offset < view.byteLength - 8) {
+              if (view.getUint8(offset) !== 0xFF) { offset++; continue; }
+              var marker = view.getUint8(offset + 1);
+              if (marker === 0xFF || marker === 0x00) { offset++; continue; }
+              if (marker >= 0xD0 && marker <= 0xD7) { offset += 2; continue; } // RSTn
+              if (marker === 0xD9) break; // EOI
+              if ((marker >= 0xC0 && marker <= 0xC3) || (marker >= 0xC5 && marker <= 0xC7) ||
+                  (marker >= 0xC9 && marker <= 0xCB) || (marker >= 0xCD && marker <= 0xCF)) {
+                var h = view.getUint16(offset + 5);
+                var w = view.getUint16(offset + 7);
+                return resolve({ w: w, h: h });
+              }
+              var len = view.getUint16(offset + 2);
+              offset += 2 + len;
+            }
+          }
+        } catch (e) {}
+        resolve(null);
+      };
+      reader.onerror = function () { resolve(null); };
+      reader.readAsArrayBuffer(slice);
+    });
+  }
+
+  // Безопасное чтение с ограничением разрешения: современные камеры выдают
+  // 48-108 Мп (190+ МБ в сыром виде), что вызывает ошибку «Недостаточно памяти»
+  // на смартфонах. Ограничиваем растр до 1400 px прямо при декодировании.
+  async function loadBitmap(file) {
+    var MAX_DIM = 1400;
+    var sz = await readHeaderSize(file);
+    var targetW = 0, targetH = 0;
+    if (sz && (sz.w > MAX_DIM || sz.h > MAX_DIM)) {
+      var scale = MAX_DIM / Math.max(sz.w, sz.h);
+      targetW = Math.round(sz.w * scale);
+      targetH = Math.round(sz.h * scale);
+    }
+
+    if (window.createImageBitmap) {
+      var opts = { imageOrientation: 'from-image' };
+      if (targetW && targetH) {
+        opts.resizeWidth = targetW;
+        opts.resizeHeight = targetH;
+        opts.resizeQuality = 'medium';
+      }
+      try {
+        return await createImageBitmap(file, opts);
+      } catch (err) {
+        // Если createImageBitmap с опциями не поддерживается, переходим к canvas-масштабированию ниже
+      }
+    }
+
+    // Резервный путь через HTMLImageElement с очисткой ObjectURL и масштабированием
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        if (img.naturalWidth > MAX_DIM || img.naturalHeight > MAX_DIM) {
+          try {
+            var k = MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight);
+            var cw = Math.round(img.naturalWidth * k), ch = Math.round(img.naturalHeight * k);
+            var cv = document.createElement('canvas');
+            cv.width = cw; cv.height = ch;
+            var cctx = cv.getContext('2d');
+            cctx.drawImage(img, 0, 0, cw, ch);
+            resolve(cv);
+            return;
+          } catch (e) {}
+        }
+        resolve(img);
+      };
+      img.onerror = function (e) {
+        URL.revokeObjectURL(url);
+        reject(e);
+      };
+      img.src = url;
+    });
+  }
+
+  window.handlePhoto = function (source) {   // отдельно — для автотестов
+    show('s-busy');
+    return FishCapture.processPhoto(source, manifest).then(function (r) {
+      result = r;
+      document.getElementById('p-name').textContent =
+        I18N.t('cap.itis', { name: (r.titles && (r.titles[I18N.lang] || r.titles.ru)) || r.title });
+      document.getElementById('p-petname').value = '';
+      // ползунок стартует с авто-положения: бледный рисунок уже подкручен
+      document.getElementById('boost').value = Math.round(r.boost.auto * 100);
+      show('s-preview');
+      show3D(r.kind);
+      return r;
+    }, function (err) {
+      var isMem = err && (err.name === 'QuotaExceededError' || /memory|quota|allocate/i.test(String(err)));
+      document.getElementById('err-text').textContent = isMem ? I18N.t('cap.err.memory') : String(err.message || err);
+      show('s-error');
+      throw err;
+    });
+  };
+
+  // Живая подстройка: пиксели пересчитываются из сырой копии, 3D-текстура
+  // обновляется через needsUpdate. Во время протяжки события схлопывает
+  // rAF-затвор, но rAF — только оптимизация: в перекрытой вкладке Chrome
+  // его замораживает, поэтому отпускание ползунка ('change') и отправка
+  // применяют значение синхронно, иначе рыбка уплывёт неподкрученной.
+  var boostEl = document.getElementById('boost');
+  var boostQueued = false;
+  function applyBoost() {
+    boostQueued = false;
+    if (!result || !result.boost) return;
+    var v = boostEl.value / 100;
+    if (result.boost.value === v) return;
+    result.boost.set(v);
+    if (P3.mesh && P3.mesh.material.map) P3.mesh.material.map.needsUpdate = true;
+    var flat = document.getElementById('p-img');
+    if (!flat.hidden) flat.src = result.boost.pvCanvas.toDataURL('image/png');
+  }
+  boostEl.addEventListener('input', function () {
+    if (!boostQueued) { boostQueued = true; requestAnimationFrame(applyBoost); }
+  });
+  boostEl.addEventListener('change', applyBoost);
+
+  // ── звуковое подтверждение автозахвата ──────────────────────────────
+  // Ни одного файла-ассета: короткий бип чистым WebAudio-осциллятором.
+  function beep() {
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      var actx = new Ctx();
+      var osc = actx.createOscillator(), gain = actx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.001, actx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.25, actx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.25);
+      osc.connect(gain); gain.connect(actx.destination);
+      osc.start(); osc.stop(actx.currentTime + 0.26);
+    } catch (e) { /* автоплей звука мог быть заблокирован — не критично */ }
+  }
+
+  // ── живой автозахват ─────────────────────────────────────────────────
+  // Сканируем видеопоток каждый кадр через FishCapture.quickScan: как
+  // только 4 метки находятся стабильно на одном виде и под допустимым
+  // углом дольше STABLE_MS — сами делаем «снимок» текущего кадра видео
+  // и дальше ведём его тем же путём, что и файл из <input capture>.
+  var liveVideo = document.getElementById('live-video');
+  var liveStream = null, liveRAF = null;
+  var liveKind = null, liveStableSince = 0, liveArmed = false;
+  var STABLE_MS = 1000;
+
+  function stopLive() {
+    liveArmed = false;
+    if (liveRAF) cancelAnimationFrame(liveRAF);
+    liveRAF = null;
+    if (liveStream) { liveStream.getTracks().forEach(function (t) { t.stop(); }); liveStream = null; }
+  }
+
+  function startLive() {
+    if (!manifest) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      document.getElementById('err-text').textContent = I18N.t('cap.err.camera');
+      show('s-error');
+      return;
+    }
+    show('s-live');
+    liveKind = null; liveStableSince = 0; liveArmed = true;
+    var constraints = {
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    };
+    navigator.mediaDevices.getUserMedia(constraints)
+      .catch(function () {
+        return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      })
+      .then(function (stream) {
+        liveStream = stream;
+        liveVideo.srcObject = stream;
+        var p = liveVideo.play();
+        if (p && p.catch) p.catch(function () {});
+        liveRAF = requestAnimationFrame(liveTick);
+      })
+      .catch(function (err) {
+        console.warn('getUserMedia error:', err);
+        document.getElementById('err-text').textContent = I18N.t('cap.err.camera');
+        show('s-error');
+      });
+  }
+
+  function liveTick() {
+    if (!liveArmed) return;
+    var hint = document.getElementById('live-hint');
+    var r = liveVideo.readyState >= 2 ? FishCapture.quickScan(liveVideo, manifest) : null;
+    var now = performance.now();
+    if (r) {
+      if (r.kind !== liveKind) { liveKind = r.kind; liveStableSince = now; }
+      var held = now - liveStableSince;
+      hint.textContent = I18N.t('cap.live.found', { pct: Math.min(100, Math.round(held / STABLE_MS * 100)) });
+      if (held >= STABLE_MS) {
+        liveArmed = false;
+        beep();
+        stopLive();
+        show('s-busy');
+        window.handlePhoto(liveVideo);
+        return;
+      }
+    } else {
+      liveKind = null; liveStableSince = now;
+      hint.textContent = I18N.t('cap.live.hint');
+    }
+    liveRAF = requestAnimationFrame(liveTick);
+  }
+
+  var bLive = document.getElementById('b-live');
+  var bFileLabel = document.getElementById('b-file-label');
+  var bErrLive = document.getElementById('b-err-live');
+  var bErrShoot = document.getElementById('b-err-shoot');
+  var hasLiveCam = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+  if (!hasLiveCam) {
+    if (bLive) bLive.hidden = true;
+    if (bFileLabel) bFileLabel.className = 'big green';
+    if (bErrLive) bErrLive.hidden = true;
+    if (bErrShoot) bErrShoot.className = 'big green';
+  } else {
+    if (bLive) bLive.addEventListener('click', startLive);
+    if (bErrLive) bErrLive.addEventListener('click', startLive);
+    if (bErrShoot) bErrShoot.className = 'big ghost';
+  }
+
+  document.getElementById('b-live-cancel').addEventListener('click', function () {
+    stopLive();
+    show('s-start');
+  });
+
+  function onFileChosen(file) {
+    if (!file || !manifest) return;
+    show('s-busy');
+    loadBitmap(file).then(window.handlePhoto, function (err) {
+      var isMem = err && (err.name === 'QuotaExceededError' || /memory|quota|allocate/i.test(String(err)));
+      document.getElementById('err-text').textContent = isMem ? I18N.t('cap.err.memory') : I18N.t('cap.err.photo');
+      show('s-error');
+    });
+  }
+
+  document.getElementById('file').addEventListener('change', function () {
+    var file = this.files && this.files[0];
+    this.value = '';
+    onFileChosen(file);
+  });
+
+  var fileGallery = document.getElementById('file-gallery');
+  if (fileGallery) {
+    fileGallery.addEventListener('change', function () {
+      var file = this.files && this.files[0];
+      this.value = '';
+      onFileChosen(file);
+    });
+  }
+
+  window.releaseFish = function () {         // отдельно — для автотестов
+    if (!result) return Promise.reject(new Error(I18N.t('cap.err.nofish')));
+    applyBoost();   // страховка: rAF мог не успеть — уходит то, что на ползунке
+    document.getElementById('busy-text').textContent = I18N.t('cap.sending');
+    show('s-busy');
+    return fetch(Tank.api + '/fish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // текстура запекается с текущим положением ползунка — в аквариум
+      // уплывает то, что человек видел на превью
+      body: JSON.stringify({
+        kind: result.kind,
+        name: document.getElementById('p-petname').value,
+        texture: result.boost ? result.boost.bake().texture : result.texture
+      })
+    }).then(function (r) {
+      if (!r.ok) throw new Error(I18N.t('cap.err.status', { code: r.status }));
+      return r.json();
+    }).then(function (r) {
+      show('s-done');
+      tellTank();
+      return r;
+    }, function (err) {
+      document.getElementById('err-text').textContent = I18N.t('cap.err.send', { msg: err.message || err });
+      show('s-error');
+      throw err;
+    });
+  };
+
+  document.getElementById('b-release').addEventListener('click', function () { window.releaseFish(); });
+})();
+</script>
+</body>
+</html>

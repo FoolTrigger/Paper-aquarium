@@ -1,0 +1,37 @@
+[
+  {
+    "name": "bottledolphin",
+    "title": "Дельфин",
+    "url": "/assets/models/pack/bottledolphin/bottledolphin.glb"
+  },
+  {
+    "name": "goldfish2",
+    "title": "Золотая рыбка",
+    "url": "/assets/models/pack/goldfish2/goldfish2.glb"
+  },
+  {
+    "name": "mantaray",
+    "title": "Скат манта",
+    "url": "/assets/models/pack/mantaray/mantaray.glb"
+  },
+  {
+    "name": "minkewhale",
+    "title": "Кит",
+    "url": "/assets/models/pack/minkewhale/minkewhale.glb"
+  },
+  {
+    "name": "percula",
+    "title": "Рыба-перкула",
+    "url": "/assets/models/pack/percula/percula.glb"
+  },
+  {
+    "name": "pufferfish",
+    "title": "Рыба-шар",
+    "url": "/assets/models/pack/pufferfish/pufferfish.glb"
+  },
+  {
+    "name": "reefshark",
+    "title": "Акула",
+    "url": "/assets/models/pack/reefshark/reefshark.glb"
+  }
+]

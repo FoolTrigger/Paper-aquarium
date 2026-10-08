@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-t="qr.title">Вход с телефона — Paper Aquarium</title>
+<link rel="icon" href="/assets/app-icon.png">
+<style>
+  :root {
+    --ink: #eaf6ff;
+    --muted: #8aa6bd;
+    --dim: #5f7c94;
+    --card: rgba(9, 24, 40, 0.76);
+    --line: rgba(140, 200, 255, 0.18);
+    --accent: #58d6ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100vh; }
+  body {
+    background:
+      radial-gradient(1200px 800px at 20% -10%, #0d4a6b 0%, transparent 60%),
+      radial-gradient(900px 700px at 90% 10%, #0a3a5c 0%, transparent 55%),
+      linear-gradient(180deg, #051624 0%, #030d17 100%);
+    background-attachment: fixed;
+    color: var(--ink);
+    font: 15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 480px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 32px 28px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 24px 64px rgba(0, 10, 20, 0.6);
+    text-align: center;
+  }
+  .toprow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .back-btn {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color .15s;
+  }
+  .back-btn:hover { color: var(--accent); }
+  h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 650;
+    letter-spacing: -0.3px;
+  }
+  .lead {
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+  .qr-frame {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    background: #ffffff;
+    padding: 16px;
+    border-radius: 20px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+    margin-bottom: 22px;
+  }
+  .qr-frame svg {
+    display: block;
+    width: 220px;
+    height: 220px;
+  }
+  .url-box {
+    background: rgba(4, 16, 28, 0.7);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .url-text {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 14px;
+    color: var(--accent);
+    word-break: break-all;
+    text-align: left;
+    text-decoration: none;
+  }
+  .url-text:hover { text-decoration: underline; }
+  .btn-copy {
+    appearance: none;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: rgba(88, 214, 255, 0.12);
+    color: var(--ink);
+    white-space: nowrap;
+    transition: all .15s;
+  }
+  .btn-copy:hover {
+    background: rgba(88, 214, 255, 0.24);
+    border-color: var(--accent);
+  }
+  .notes {
+    text-align: left;
+    background: rgba(88, 214, 255, 0.05);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 12px 12px 0;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .notes b { color: var(--ink); }
+  .notes ol { margin: 6px 0 0; padding-left: 18px; }
+  .notes li { margin-bottom: 4px; }
+  .ifaces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 12px;
+  }
+  .iface-btn {
+    appearance: none;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    transition: all .15s;
+  }
+  .iface-btn:hover { color: var(--ink); border-color: var(--accent); }
+  .iface-btn.active {
+    background: rgba(88, 214, 255, 0.16);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="toprow">
+    <a href="/" class="back-btn" data-t="qr.back">← На главную</a>
+    <span id="lang"></span>
+  </div>
+
+  <h1 data-t="qr.title">📱 Вход с телефона</h1>
+  <p class="lead" data-t="qr.lead">Отсканируйте QR-код камерой смартфона, чтобы открыть Paper Aquarium на телефоне.</p>
+
+  <div class="qr-frame" id="qr-container">
+    <div style="width:220px; height:220px; display:grid; place-items:center; color:#666;">Загрузка...</div>
+  </div>
+
+  <div class="url-box">
+    <a id="url-link" class="url-text" target="_blank" rel="noopener"></a>
+    <button class="btn-copy" id="btn-copy" data-t="qr.copy">Скопировать</button>
+  </div>
+
+  <div class="notes">
+    <b data-t="qr.wifi.title">Важно: подключение к одной сети</b>
+    <ol>
+      <li data-t="qr.wifi.step1">Телефон и компьютер должны быть в одной сети Wi-Fi.</li>
+      <li data-t="qr.wifi.step2">Наведите камеру смартфона на QR-код и коснитесь ссылки.</li>
+      <li data-t="qr.wifi.step3">Рисуйте рыбок, фотографируйте раскраски и кормите их прямо со смартфона!</li>
+    </ol>
+  </div>
+
+  <div id="ifaces-section" hidden>
+    <div style="font-size:12px; color:var(--dim); margin-bottom:6px;" data-t="qr.ifaces">Выбрать адрес сети:</div>
+    <div class="ifaces" id="ifaces-list"></div>
+  </div>
+</div>
+
+<script src="/assets/i18n.js"></script>
+<script src="/vendor/qr.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  I18N.mount(document.getElementById('lang'));
+  document.title = I18N.t('qr.title');
+  addEventListener('aqua:lang', function () {
+    document.title = I18N.t('qr.title');
+  });
+
+  var qrContainer = document.getElementById('qr-container');
+  var urlLink = document.getElementById('url-link');
+  var btnCopy = document.getElementById('btn-copy');
+  var ifacesSection = document.getElementById('ifaces-section');
+  var ifacesList = document.getElementById('ifaces-list');
+
+  // Параметры запроса: можно передать путь к конкретному аквариуму
+  var params = new URLSearchParams(location.search);
+  var targetPath = params.get('path') || (params.get('t') ? ('/t/' + params.get('t')) : '/');
+
+  var currentTargetUrl = '';
+
+  function setTargetUrl(base) {
+    var cleanBase = base.replace(/\/+$/, '');
+    var cleanPath = targetPath.startsWith('/') ? targetPath : ('/' + targetPath);
+    currentTargetUrl = cleanBase + cleanPath;
+
+    urlLink.textContent = currentTargetUrl;
+    urlLink.href = currentTargetUrl;
+
+    if (window.qrcode) {
+      try {
+        var qr = window.qrcode(0, 'M');
+        qr.addData(currentTargetUrl);
+        qr.make();
+        qrContainer.innerHTML = qr.createSvgTag(5, 0);
+      } catch (e) {
+        qrContainer.textContent = 'Ошибка генерации QR-кода';
+      }
+    }
+  }
+
+  btnCopy.onclick = function () {
+    if (!currentTargetUrl) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(currentTargetUrl).then(function () {
+        var orig = btnCopy.textContent;
+        btnCopy.textContent = I18N.t('qr.copied');
+        setTimeout(function () { btnCopy.textContent = orig; }, 2000);
+      });
+    }
+  };
+
+  fetch('/api/network')
+    .then(function (r) { return r.json(); })
+    .then(function (info) {
+      var base = (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1')
+        ? location.origin
+        : (info.preferredUrl || location.origin);
+
+      setTargetUrl(base);
+
+      if (info.addresses && info.addresses.length > 1) {
+        ifacesSection.hidden = false;
+        ifacesList.innerHTML = '';
+        info.addresses.forEach(function (addr, idx) {
+          var btn = document.createElement('button');
+          btn.className = 'iface-btn' + (addr.url === base ? ' active' : '');
+          btn.textContent = (addr.name || 'Сеть ' + (idx + 1)) + ' (' + addr.address + ')';
+          btn.onclick = function () {
+            document.querySelectorAll('.iface-btn').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            setTargetUrl(addr.url);
+          };
+          ifacesList.appendChild(btn);
+        });
+      }
+    })
+    .catch(function () {
+      setTargetUrl(location.origin);
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-t="print.title">Раскраски — печать шаблонов</title>
+<style>
+  body { margin: 0; background: #223; font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
+  .top {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 20px; background: #112; color: #eaf6ff;
+  }
+  .top h1 { font-size: 16px; margin: 0; flex: 1; }
+  .top a { color: #58d6ff; text-decoration: none; font-size: 13px; }
+  .top a.pdf {
+    border: 1px solid #58d6ff; border-radius: 8px; padding: 6px 13px;
+  }
+  button {
+    cursor: pointer; font: inherit; font-size: 13px;
+    background: #58d6ff; border: 0; border-radius: 8px; padding: 7px 14px;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+  .card { margin-bottom: 28px; }
+  .bar {
+    display: flex; align-items: center; justify-content: space-between;
+    color: #eaf6ff; margin-bottom: 8px;
+  }
+  .sheet {
+    display: block; width: 100%; background: #fff;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5); border-radius: 4px;
+  }
+  .note { color: #8aa; font-size: 13px; margin: 0 0 20px; }
+
+  /* Внутри меню аквариума страница живёт как врезка: подложка и ссылка
+     «мои аквариумы» там лишние, а кнопка печати нужна. */
+  body.embed { background: none; }
+  body.embed .top { position: static; background: none; padding: 4px 2px 0; }
+  body.embed .top h1 { font-size: 15px; }
+  body.embed .top a.home { display: none; }
+  body.embed .wrap { padding: 14px 2px 6px; }
+  body.embed .sheet { box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+
+  @media print {
+    @page { size: A4 landscape; margin: 0; }
+
+    /* Ноль отступов у всего, что оборачивает лист. Отступы врезки
+       (body.embed) специфичнее обычных правил и в печать пролезали:
+       лишние 14 px не влезали на страницу, лист сползал на следующую,
+       и в стопке появлялись пустые. */
+    html, body, body.embed { margin: 0; padding: 0; background: #fff; }
+    .top, .bar, .note { display: none; }
+    .wrap, body.embed .wrap { max-width: none; margin: 0; padding: 0; }
+
+    /* Разрыв ставим ПЕРЕД каждым листом, кроме первого. Разрыв «после»
+       срабатывал и на последнем — отсюда пустая страница в конце. */
+    .card { margin: 0; break-inside: avoid; page-break-inside: avoid; }
+    .card + .card { break-before: page; page-break-before: always; }
+
+    /* Размер — от самой страницы, а не в миллиметрах: при полях 0 браузер
+       округляет мм по-своему, лист получался на волос выше страницы и
+       выталкивал за собой пустую. */
+    .sheet {
+      width: 100vw; height: 100vh; object-fit: contain;
+      box-shadow: none; border-radius: 0; background: #fff;
+    }
+
+    /* Печать одного листа: остальные не просто скрыты — с них снят и разрыв,
+       иначе перед единственным листом оставалась пустая страница. */
+    body.one .card { display: none; break-before: auto; page-break-before: auto; }
+    body.one .card.target { display: block; }
+  }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1 data-t="print.title"></h1>
+  <a href="/" class="home" data-t="print.home"></a>
+  <a class="pdf" id="pdfLink" download data-t="print.pdf"></a>
+  <button onclick="document.body.classList.remove('one'); print()" data-t="print.all"></button>
+</div>
+<div class="wrap">
+  <p class="note" data-t="print.note"></p>
+  <p class="note" data-t="print.note2"></p>
+
+  <div id="list"></div>
+</div>
+<script src="/assets/i18n.js"></script>
+<script>
+var Q = new URLSearchParams(location.search);
+
+// Врезка в меню аквариума: своя подложка не нужна, а высоту надо сообщать
+// наружу — карточка меню сама её не угадает.
+var EMBED = Q.has('embed');
+if (EMBED) document.body.classList.add('embed');
+
+// ?lang= — для ссылок на конкретный язык и для генератора PDF: у headless
+// Chrome нет ни localStorage с выбором, ни нужного navigator.language.
+if (Q.get('lang')) I18N.set(Q.get('lang'));
+
+// Генератор печатает страницу целиком, не прокручивая, — ленивые картинки
+// ниже экрана так и не загрузятся, и в PDF уедут пустые листы.
+var PDF = Q.has('pdf');
+
+// Готовый PDF собран генератором точно под A4 — в нём метки заведомо
+// правильного размера, в отличие от «Сохранить как PDF» с чужими полями.
+var pdfLink = document.getElementById('pdfLink');
+function repdf() {
+  pdfLink.href = '/assets/coloring/raskraski.' + I18N.lang + '.pdf';
+  pdfLink.setAttribute('download', I18N.t('print.pdf.file'));
+}
+repdf();
+addEventListener('aqua:lang', repdf);
+
+// Открытое окно подтверждения бывает выше содержимого страницы — тогда
+// врезке нужна его высота, иначе окно срежется по краям.
+function frameHeight() {
+  return Math.max(document.body.scrollHeight,
+    (window.Modal && Modal.height && Modal.height()) || 0);
+}
+
+if (EMBED && window.parent !== window) {
+  var tellHeight = function () {
+    try {
+      window.parent.postMessage({ aqua: 'height', height: frameHeight() }, location.origin);
+    } catch (e) { /* не критично */ }
+  };
+  if (window.ResizeObserver) new ResizeObserver(tellHeight).observe(document.body);
+  addEventListener('load', tellHeight);
+  tellHeight();
+}
+
+// Список листов строим из манифеста: он и так единственный источник правды о
+// том, какие виды в игре — дублировать его разметкой значит однажды напечатать
+// лист, который капчур уже не узнаёт.
+function printOne(name) {
+  document.body.classList.add('one');
+  document.querySelectorAll('.card').forEach(function (c) {
+    c.classList.toggle('target', c.dataset.fish === name);
+  });
+  print();
+}
+
+// Лист у каждого вида свой на каждый язык — подпись под рыбой печатается
+// на том же языке, что и страница. Метки в углах во всех версиях одни и те
+// же, так что распознаётся любой распечатанный лист.
+function sheetOf(f) {
+  return '/' + ((f.sheets && f.sheets[I18N.lang]) || f.svg).replace(/^\//, '');
+}
+
+function titleOf(f) {
+  return (f.titles && (f.titles[I18N.lang] || f.titles.ru)) || f.title;
+}
+
+fetch('/assets/coloring/manifest.json')
+  .then(function (r) { return r.json(); })
+  .then(function (m) {
+    var list = document.getElementById('list');
+    m.fish.forEach(function (f) {
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.fish = f.name;
+
+      var bar = document.createElement('div');
+      bar.className = 'bar';
+      var b = document.createElement('b');
+      var btn = document.createElement('button');
+      btn.setAttribute('data-t', 'print.one');
+      btn.textContent = I18N.t('print.one');
+      btn.onclick = function () { printOne(f.name); };
+      bar.appendChild(b);
+      bar.appendChild(btn);
+
+      var img = document.createElement('img');
+      img.className = 'sheet';
+      img.loading = PDF ? 'eager' : 'lazy';
+
+      var retitle = function () {
+        b.textContent = img.alt = titleOf(f);
+        img.src = sheetOf(f);
+      };
+      retitle();
+      addEventListener('aqua:lang', retitle);
+
+      card.appendChild(bar);
+      card.appendChild(img);
+      list.appendChild(card);
+    });
+  })
+  .catch(function () {
+    document.getElementById('list').textContent = I18N.t('print.nomanifest');
+  });
+</script>
+</body>
+</html>

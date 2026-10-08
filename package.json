@@ -1,0 +1,30 @@
+{
+  "name": "paper-aquarium",
+  "version": "1.0.0",
+  "description": "Paper Aquarium: a child colours a printed sheet, photographs it — and the fish swims in a 3D scene",
+  "author": "Paper Aquarium Contributors",
+  "license": "MIT",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/test_server.js",
+    "coloring": "node tools/make-coloring.js",
+    "pdf": "node tools/make-pdf.js",
+    "icon": "powershell -ExecutionPolicy Bypass -File tools/generate-icon.ps1",
+    "build:launcher": "powershell -ExecutionPolicy Bypass -File tools/build-launcher.ps1",
+    "build:dist": "powershell -ExecutionPolicy Bypass -File tools/build-dist.ps1",
+    "build": "powershell -ExecutionPolicy Bypass -File tools/build-dist.ps1"
+  },
+  "keywords": [
+    "aquarium",
+    "threejs",
+    "webgl",
+    "kids",
+    "interactive",
+    "coloring",
+    "fish"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

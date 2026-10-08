@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-t="terms.title">Правила и данные</title>
+<style>
+  :root {
+    --ink: #eaf6ff;
+    --muted: #8aa6bd;
+    --dim: #5f7c94;
+    --card: rgba(9, 24, 40, 0.72);
+    --line: rgba(140, 200, 255, 0.16);
+    --accent: #58d6ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 800px at 20% -10%, #0d4a6b 0%, transparent 60%),
+      radial-gradient(900px 700px at 90% 10%, #0a3a5c 0%, transparent 55%),
+      linear-gradient(180deg, #051624 0%, #030d17 100%);
+    background-attachment: fixed;
+    color: var(--ink);
+    font: 15px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; position: relative; }
+  .top-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 32px; gap: 16px; flex-wrap: wrap;
+  }
+  .back {
+    color: var(--accent); text-decoration: none; font-size: 15px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 8px; background: rgba(88, 214, 255, 0.08);
+    border: 1px solid var(--line);
+  }
+  .back:hover { background: rgba(88, 214, 255, 0.16); }
+  .langpick { display: flex; gap: 4px; }
+  .langpick button {
+    cursor: pointer; font: inherit; font-size: 12px; font-weight: 600;
+    color: var(--muted); background: transparent; border: 1px solid transparent;
+    border-radius: 6px; padding: 4px 8px;
+  }
+  .langpick button:hover { color: var(--ink); }
+  .langpick button[aria-pressed="true"] {
+    color: var(--ink); background: rgba(88, 214, 255, 0.16); border-color: var(--line);
+  }
+  h1 { font-size: 28px; margin: 0 0 8px; font-weight: 600; letter-spacing: -0.01em; }
+  p.lead { font-size: 16px; color: var(--muted); margin: 0 0 32px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 24px 28px; margin-bottom: 20px; backdrop-filter: blur(12px);
+  }
+  .card h2 { font-size: 18px; margin: 0 0 12px; color: var(--accent); font-weight: 600; }
+  .card p { margin: 0 0 12px; color: var(--ink); line-height: 1.6; }
+  .card p:last-child { margin-bottom: 0; }
+  .card ul { margin: 8px 0 12px 20px; padding: 0; color: var(--muted); }
+  .card li { margin-bottom: 6px; }
+  .card li b { color: var(--ink); }
+  .meta { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--dim); }
+  [data-content] { display: none; }
+  [data-content].active { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-nav">
+    <a href="/" data-t="terms.back" class="back">← к аквариумам</a>
+    <div id="lang"></div>
+  </div>
+
+  <div data-content="ru" class="active">
+    <h1>Правила и данные</h1>
+    <p class="lead">Как сервис хранит рисунки, защищает доступ и удаляет информацию.</p>
+
+    <div class="card">
+      <h2>1. Что это за сервис</h2>
+      <p>«Бумажный аквариум» — интерактивная веб-инсталляция, оживляющая детские рисунки в общей 3D-сцене. Ребёнок раскрашивает бумажный шаблон, фотографирует его, и созданная им рыбка плавает в виртуальном аквариуме.</p>
+    </div>
+
+    <div class="card">
+      <h2>2. Какие данные сохраняются</h2>
+      <p>Мы храним только то, без чего аквариум физически не может функционировать:</p>
+      <ul>
+        <li><b>Название аквариума и дата создания:</b> задаются при создании аквариума.</li>
+        <li><b>Текстуры рыбок:</b> оцифрованные изображения раскрашенных рисунков (PNG-файлы) и заданные им имена.</li>
+        <li><b>Пользовательские фоны:</b> изображения, загруженные хозяином аквариума.</li>
+        <li><b>Защита настроек:</b> случайная криптографическая соль и scrypt-хеш пароля администратора. В открытом виде пароль на сервере никогда не сохраняется.</li>
+        <li><b>PIN-коды для телевизоров:</b> временные 5-значные цифровые коды живут только в оперативной памяти сервера 5 минут и сбрасываются при перезапуске.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>3. Отсутствие учетных записей</h2>
+      <p>В сервисе нет логинов, регистрации, подтверждений по SMS, почтовых адресов и профилей:</p>
+      <ul>
+        <li><b>Код аквариума (10 знаков):</b> даёт доступ на просмотр аквариума и запуск рыбок. Его можно передавать детям, родственникам и выводить на экран телевизора.</li>
+        <li><b>Пароль управления:</b> требуется для переименования, смены фонов, очистки рыбок и удаления аквариума.</li>
+      </ul>
+      <p>Оба ключа сохраняются в локальном хранилище (localStorage) вашего браузера. Очистка истории браузера удаляет сохранённые ключи локально, но сам аквариум можно снова открыть по сохранённой ссылке и паролю.</p>
+    </div>
+
+    <div class="card">
+      <h2>4. Корзина и удаление данных</h2>
+      <p>Любая удалённая рыбка или аквариум сразу перемещаются во внутреннюю корзину (папка <code>trash</code> на сервере). Корзина окончательно и безвозвратно очищается через 30 дней.</p>
+      <p>Хозяин аквариума в любой момент может удалить своих рыбок или аквариум целиком через меню администрирования. После очистки корзины никаких скрытых копий удалённых рисунков на сервере не остаётся.</p>
+    </div>
+
+    <div class="card">
+      <h2>5. Приватность и права (GDPR)</h2>
+      <p>Сервер не использует рекламные трекеры, маркетинговые пиксели и аналитические cookies. В журнал сервера попадают только технические события (например, добавление рыбки), без персональных идентификаторов.</p>
+      <p>Вы имеете полное право на ознакомление, исправление и полное удаление своих данных в любой момент через интерфейс управления аквариумом или обратившись к администратору конкретного сервера.</p>
+    </div>
+
+    <div class="meta">
+      Бумажный аквариум — открытое веб-приложение. Исходный код распространяется по лицензии MIT.
+    </div>
+  </div>
+
+  <div data-content="en">
+    <h1>Terms and Data</h1>
+    <p class="lead">How the service stores drawings, secures access, and purges data.</p>
+
+    <div class="card">
+      <h2>1. What this service is</h2>
+      <p>Paper Aquarium is an interactive web installation bringing physical coloring pages to life inside a shared 3D aquarium scene. Children color a printed sheet, capture it with a camera, and watch their fish swim in the virtual tank.</p>
+    </div>
+
+    <div class="card">
+      <h2>2. What data is stored</h2>
+      <p>We only store data strictly required for the aquarium to operate:</p>
+      <ul>
+        <li><b>Aquarium name and creation date:</b> chosen during tank creation.</li>
+        <li><b>Fish textures:</b> scanned drawings (PNG files) and assigned pet names.</li>
+        <li><b>Custom backgrounds:</b> background images uploaded by the owner.</li>
+        <li><b>Management security:</b> cryptographic salt and scrypt hash of the management password. Passwords are never saved in plaintext on the server.</li>
+        <li><b>TV PIN codes:</b> temporary 5-digit codes stored exclusively in RAM for 5 minutes.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>3. No User Accounts</h2>
+      <p>There are no email addresses, social logins, passwords resets, or user profiles:</p>
+      <ul>
+        <li><b>Aquarium code (10 characters):</b> grants permission to view the tank and add fish.</li>
+        <li><b>Management password:</b> required to rename, change backgrounds, delete fish, or destroy the tank.</li>
+      </ul>
+      <p>Both keys are stored in your browser's localStorage. Clearing browser data removes local access, but you can always reopen your tank using the link and password.</p>
+    </div>
+
+    <div class="card">
+      <h2>4. Trash and Data Purging</h2>
+      <p>Deleted fish and deleted aquariums are moved to the server's trash folder. The server permanently purges trash items after 30 days.</p>
+      <p>The tank owner may delete individual fish or the entire aquarium at any time using the administration menu. Once purged from trash, no residual copies remain.</p>
+    </div>
+
+    <div class="card">
+      <h2>5. Privacy & GDPR Rights</h2>
+      <p>The server employs zero advertising trackers, analytics scripts, or marketing cookies. Internal server logs record only technical actions (e.g. fish added) without user profiling.</p>
+      <p>You have full rights to access, rectify, and erase your data at any time directly through the aquarium management controls or by contacting the server operator.</p>
+    </div>
+
+    <div class="meta">
+      Paper Aquarium is open source software released under the MIT License.
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/assets/i18n.js"></script>
+<script type="module">
+(function () {
+  'use strict';
+  I18N.mount(document.getElementById('lang'));
+  function update() {
+    var l = I18N.lang || 'ru';
+    document.documentElement.lang = l;
+    document.querySelectorAll('[data-content]').forEach(function (el) {
+      el.classList.toggle('active', el.dataset.content === l);
+    });
+    I18N.apply(document);
+  }
+  window.addEventListener('aqua:lang', update);
+  update();
+})();
+</script>
+</body>
+</html>
