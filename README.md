@@ -14,6 +14,12 @@ The server is plain Node with zero dependencies, the scene is three.js, and
 everything the game owns lives in `data/`.
 
 <p align="center">
+  <a href="assets/coloring/raskraski.en.pdf">
+    <img src="https://img.shields.io/badge/Download_coloring_pages-(PDF)-2ea44f?style=for-the-badge&logo=adobeacrobatreader&logoColor=white" alt="Скачать раскраски">
+  </a>
+</p>
+
+<p align="center">
   <img src="docs/screenshots/aquarium.jpg" alt="An aquarium with fish coloured by a child" width="700">
 </p>
 
