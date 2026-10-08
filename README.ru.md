@@ -13,18 +13,77 @@
 Сервер на голом Node без единой зависимости, сцена на three.js, всё
 хозяйство — папка `data/`.
 
-![Аквариум с рыбками, раскрашенными ребёнком](docs/screenshots/aquarium.jpg)
+<div align="center">
 
-| | |
-|---|---|
-| ![Меню аквариума](docs/screenshots/menu.jpg) | ![Экран съёмки](docs/screenshots/capture.jpg) |
-| Клик в любом месте — меню со всеми дорогами | Съёмка листа открывается там же, врезкой |
-| ![Листы раскрасок](docs/screenshots/print.jpg) | ![Рыбки из набора](docs/screenshots/pack.jpg) |
-| Готовые листы A4 с метками по углам | 7 бесплатных 3D-рыбок в комплекте |
+  <!-- Главный баннер -->
+  <img src="docs/screenshots/aquarium.jpg" alt="Аквариум с рыбками, раскрашенными ребёнком" width="750">
+  <br><br>
 
-Ещё: [список рыбок с рисунками](docs/screenshots/fish-list.jpg),
-[выбор фона](docs/screenshots/backgrounds.jpg),
-[список аквариумов](docs/screenshots/home.jpg).
+  <!-- Основные 4 экрана (2x2) -->
+  <table align="center">
+    <tr>
+      <th align="center">Меню аквариума</th>
+      <th align="center">Экран съёмки</th>
+    </tr>
+    <tr>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/menu.jpg" height="320" alt="Меню аквариума">
+        <br><br>
+        <sub>Клик в любом месте — меню со всеми опциями</sub>
+      </td>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/capture.jpg" height="320" alt="Экран съёмки">
+        <br><br>
+        <sub>Съёмка листа с рыбкой</sub>
+      </td>
+    </tr>
+    <tr>
+      <th align="center">Листы раскрасок</th>
+      <th align="center">Рыбки из набора</th>
+    </tr>
+    <tr>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/print.jpg" height="320" alt="Листы раскрасок">
+        <br><br>
+        <sub>Готовые листы A4 с метками по углам</sub>
+      </td>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/pack.jpg" height="320" alt="Рыбки из набора">
+        <br><br>
+        <sub>7 бесплатных 3D-рыбок в комплекте</sub>
+      </td>
+    </tr>
+  </table>
+
+  <br>
+
+  <!-- Дополнительные 3 экрана (3 в ряд) -->
+  <table align="center">
+    <tr>
+      <th align="center">Список рыбок</th>
+      <th align="center">Выбор фона</th>
+      <th align="center">Список аквариумов</th>
+    </tr>
+    <tr>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/fish-list.jpg" height="240" alt="Список рыбок с рисунками">
+        <br><br>
+        <sub>Список рыбок с рисунками</sub>
+      </td>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/backgrounds.jpg" height="240" alt="Выбор фона">
+        <br><br>
+        <sub>Выбор фона</sub>
+      </td>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/home.jpg" height="240" alt="Список аквариумов">
+        <br><br>
+        <sub>Список аквариумов</sub>
+      </td>
+    </tr>
+  </table>
+
+</div>
 
 ## Ключевые возможности и технологии
 
