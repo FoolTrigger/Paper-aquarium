@@ -13,6 +13,12 @@
 Сервер на голом Node без единой зависимости, сцена на three.js, всё
 хозяйство — папка `data/`.
 
+<p align="center">
+  <a href="assets/coloring/raskraski.en.pdf">
+    <img src="https://img.shields.io/badge/Скачать_раскраски-(PDF)-2ea44f?style=for-the-badge&logo=adobeacrobatreader&logoColor=white" alt="Скачать раскраски">
+  </a>
+</p>
+
 <div align="center">
 
   <!-- Главный баннер -->
