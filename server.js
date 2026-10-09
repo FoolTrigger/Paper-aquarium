@@ -54,6 +54,20 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+// Защита от непредвиденных сбоев и закрытых каналов
+process.on('uncaughtException', (err) => {
+  try { console.error('[UNCAUGHT EXCEPTION]', err && err.stack ? err.stack : err); } catch (e) {}
+});
+process.on('unhandledRejection', (reason) => {
+  try { console.error('[UNHANDLED REJECTION]', reason); } catch (e) {}
+});
+if (process.stdout && process.stdout.on) {
+  process.stdout.on('error', (err) => { if (err && err.code === 'EPIPE') return; });
+}
+if (process.stderr && process.stderr.on) {
+  process.stderr.on('error', (err) => { if (err && err.code === 'EPIPE') return; });
+}
+
 const ROOT = __dirname;
 const PORT = Number(process.env.PORT) || 8000;
 const MAX_BODY = 12 * 1024 * 1024;
@@ -132,7 +146,7 @@ function resolveDataDir() {
     return path.join(ROOT, 'data');
   }
   if (process.platform === 'win32') {
-    const isProgramFiles = /Program Files/i.test(ROOT);
+    const isProgramFiles = /Program Files/i.test(ROOT) || /Programs[\\/]Paper Aquarium/i.test(ROOT);
     const appData = process.env.APPDATA || (os.homedir() ? path.join(os.homedir(), 'AppData', 'Roaming') : null);
     if ((isProgramFiles || process.env.AQUA_DESKTOP === '1') && appData) {
       return path.join(appData, 'PaperAquarium', 'data');
@@ -239,8 +253,19 @@ function listPack() {
 // не переживает перезапуск.
 // Сколько аквариумов завели с адреса за последний час. Память, а не диск:
 // перезапуск сбрасывает — и пусть, это защита от скуки, а не от осады.
+function isLocalKey(key) {
+  if (!key) return false;
+  return key === '127.0.0.1' || key === '::1' || key === 'localhost' ||
+    key.startsWith('::ffff:127.') || key.startsWith('::ffff:192.168.') ||
+    key.startsWith('::ffff:10.') || key.startsWith('192.168.') ||
+    key.startsWith('10.') || key.startsWith('172.');
+}
+
 const newTanks = new Map();
 function allowNewTank(key) {
+  if (process.env.AQUA_DESKTOP === '1' || process.env.AQUA_PORTABLE === '1' || isLocalKey(key)) {
+    return true;
+  }
   const hour = 60 * 60 * 1000;
   const now = Date.now();
   const fresh = (newTanks.get(key) || []).filter((t) => now - t < hour);
@@ -417,24 +442,36 @@ function send(res, code, body, type) {
 // Тело запроса с потолком: без него один POST кладёт сервер по памяти.
 function readBody(req, res, onDone) {
   let body = '', size = 0, tooBig = false, ended = false;
-  req.on('error', () => {
+  const timer = setTimeout(() => {
     if (ended) return;
     ended = true;
     try { req.destroy(); } catch (e) {}
+    if (!res.headersSent) send(res, 408, '{"error":"таймаут ожидания данных"}');
+  }, 30000);
+  if (timer.unref) timer.unref();
+
+  req.on('error', () => {
+    clearTimeout(timer);
+    if (ended) return;
+    ended = true;
+    try { req.destroy(); } catch (e) {}
+    if (!res.headersSent) send(res, 400, '{"error":"ошибка передачи данных"}');
   });
   req.on('data', (chunk) => {
     if (tooBig || ended) return;
     size += chunk.length;
     if (size > MAX_BODY) {
+      clearTimeout(timer);
       tooBig = true;
       ended = true;
       send(res, 413, '{"error":"запрос слишком большой"}');
-      req.destroy();
+      try { req.destroy(); } catch (e) {}
       return;
     }
     body += chunk;
   });
   req.on('end', () => {
+    clearTimeout(timer);
     if (tooBig || ended) return;
     ended = true;
     try { onDone(body ? JSON.parse(body) : {}); }
@@ -549,7 +586,7 @@ function randomBackground() {
 //          сервер их не отличает вовсе), 'shader' — процедурный фон,
 //          тогда background не используется, важен только bgShaderId.
 const SHADER_IDS = new Set(['depth-gradient', 'particles']);
-const DEFAULT_SETTINGS = { background: null, bgKind: 'file', bgShaderId: 'depth-gradient' };
+const DEFAULT_SETTINGS = { background: null, bgKind: 'file', bgShaderId: 'depth-gradient', decor: null };
 
 function readSettings(t) {
   let s;
@@ -807,7 +844,8 @@ function handleTankApi(req, res, t, url) {
         background: (typeof merged.background === 'string' && backgroundUrl(t, merged.background))
           ? merged.background : cur.background,
         bgKind: merged.bgKind === 'shader' ? 'shader' : 'file',
-        bgShaderId: SHADER_IDS.has(merged.bgShaderId) ? merged.bgShaderId : cur.bgShaderId
+        bgShaderId: SHADER_IDS.has(merged.bgShaderId) ? merged.bgShaderId : cur.bgShaderId,
+        decor: (merged.decor && typeof merged.decor === 'object') ? merged.decor : (cur.decor || null)
       };
       writeSettings(t, clean);
       send(res, 200, JSON.stringify(clean));
@@ -888,7 +926,9 @@ function handleApi(req, res, url) {
   if (req.method === 'POST' && url === '/api/diag') {
     return readBody(req, res, (data) => {
       const line = `[DIAG ${new Date().toISOString()} ${clientKey(req)}] ${JSON.stringify(data)}\n`;
-      console.log(line.trim());
+      if (data && data.type === 'uncaught_error') {
+        console.warn(`[DIAG ERROR] ${data.message || ''} (${clientKey(req)})`);
+      }
       try {
         fs.appendFileSync(path.join(ROOT, 'data', 'client_diag.log'), line);
       } catch (e) {}
@@ -989,7 +1029,7 @@ function pageFor(url) {
 // уезжает и .git, и детские рисунки из data/, и купленный пак моделей —
 // папка с ним лежит в том же каталоге проекта.
 const STATIC_DIRS = ['/assets/', '/vendor/', '/demos/', '/tools/'];
-const STATIC_FILES = ['/print.html', '/terms.html', '/qr.html', '/favicon.ico'];
+const STATIC_FILES = ['/print.html', '/terms.html', '/qr.html', '/favicon.ico', '/capture.html', '/admin.html'];
 // Из data наружу смотрят только две вещи: свои фоны и снимок сцены.
 // Текстуры рыбок отдаёт API, всё остальное — не для сети.
 const DATA_FILE_RE = /^\/data\/tanks\/([^/]+)\/(?:preview\.jpg|backgrounds\/[\w.-]+)$/;
@@ -1006,9 +1046,14 @@ function staticFor(url) {
   if (clean !== url) return null;
 
   const data = clean.match(DATA_FILE_RE);
-  const allowed = data
-    ? TANK_ID_RE.test(data[1])
-    : STATIC_FILES.includes(clean) || STATIC_DIRS.some((dir) => clean.startsWith(dir));
+  if (data) {
+    if (!TANK_ID_RE.test(data[1])) return null;
+    const sub = clean.slice('/data/'.length);
+    const file = path.normalize(path.join(DATA_DIR, sub));
+    return file.startsWith(DATA_DIR + path.sep) ? file : null;
+  }
+
+  const allowed = STATIC_FILES.includes(clean) || STATIC_DIRS.some((dir) => clean.startsWith(dir));
   if (!allowed) return null;
 
   const file = path.normalize(path.join(ROOT, clean));
@@ -1054,62 +1099,88 @@ function coloringPdf(req) {
 }
 
 const server = http.createServer((req, res) => {
-  let url;
+  req.on('error', () => {
+    try { res.destroy(); } catch (e) {}
+  });
+  res.on('error', () => {
+    try { res.destroy(); } catch (e) {}
+  });
+
   try {
-    url = decodeURIComponent(req.url.split('?')[0]);
-  } catch (e) {
-    return send(res, 400, 'bad request', 'text/plain');
-  }
+    let url;
+    try {
+      url = decodeURIComponent(req.url.split('?')[0]);
+    } catch (e) {
+      return send(res, 400, 'bad request', 'text/plain');
+    }
 
-  if (url.startsWith('/api/')) return handleApi(req, res, url);
+    if (url.startsWith('/api/')) return handleApi(req, res, url);
 
-  if (url === '/raskraski.pdf') {
-    res.writeHead(302, {
-      Location: '/assets/coloring/raskraski.' + coloringPdf(req) + '.pdf',
-      'Cache-Control': 'no-store',
-      Vary: 'Accept-Language'
+    if (url === '/raskraski.pdf') {
+      res.writeHead(302, {
+        Location: '/assets/coloring/raskraski.' + coloringPdf(req) + '.pdf',
+        'Cache-Control': 'no-store',
+        Vary: 'Accept-Language'
+      });
+      return res.end();
+    }
+
+    const page = pageFor(url);
+    let file = page ? path.join(ROOT, page) : staticFor(url);
+
+    if (!file) return send(res, 404, 'not found', 'text/plain');
+    if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      return send(res, 404, 'not found', 'text/plain');
+    }
+
+    // Договариваемся по Accept, а не по имени файла: старые ссылки на .png в
+    // настройках аквариумов продолжают работать, а браузер получает webp.
+    const canWebp = WEBP_SRC_RE.test(file);
+    if (canWebp && /image\/webp/.test(req.headers.accept || '')) {
+      file = webpTwin(file) || file;
+    }
+
+    const ext = path.extname(file).toLowerCase();
+    const stat = fs.statSync(file);
+    // Размер и время правки вместо хэша: считать его на каждый запрос к
+    // трёхмегабайтной картинке дороже, чем отдать её.
+    const etag = `W/"${stat.size.toString(16)}-${Math.trunc(stat.mtimeMs).toString(16)}"`;
+    const cc = cacheControl(ext, url);
+    const headers = { 'Cache-Control': cc, ETag: etag };
+    if (cc.includes('no-store')) {
+      headers['Pragma'] = 'no-cache';
+      headers['Expires'] = '0';
+    }
+    // Без Vary кэш-посредник отдал бы webp тому, кто его не понимает.
+    if (canWebp) headers.Vary = 'Accept';
+
+    if (req.headers['if-none-match'] === etag) {
+      res.writeHead(304, headers);
+      return res.end();
+    }
+
+    headers['Content-Type'] = MIME[ext] || 'application/octet-stream';
+    res.writeHead(200, headers);
+    const stream = fs.createReadStream(file);
+    stream.on('error', () => {
+      try { res.destroy(); } catch (e) {}
     });
-    return res.end();
+    res.on('close', () => {
+      try { stream.destroy(); } catch (e) {}
+    });
+    stream.pipe(res);
+  } catch (err) {
+    console.error('[HTTP ERROR]', err);
+    if (!res.headersSent) {
+      send(res, 500, '{"error":"internal server error"}');
+    } else {
+      try { res.end(); } catch (e) {}
+    }
   }
-
-  const page = pageFor(url);
-  let file = page ? path.join(ROOT, page) : staticFor(url);
-
-  if (!file) return send(res, 404, 'not found', 'text/plain');
-  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
-    return send(res, 404, 'not found', 'text/plain');
-  }
-
-  // Договариваемся по Accept, а не по имени файла: старые ссылки на .png в
-  // настройках аквариумов продолжают работать, а браузер получает webp.
-  const canWebp = WEBP_SRC_RE.test(file);
-  if (canWebp && /image\/webp/.test(req.headers.accept || '')) {
-    file = webpTwin(file) || file;
-  }
-
-  const ext = path.extname(file).toLowerCase();
-  const stat = fs.statSync(file);
-  // Размер и время правки вместо хэша: считать его на каждый запрос к
-  // трёхмегабайтной картинке дороже, чем отдать её.
-  const etag = `W/"${stat.size.toString(16)}-${Math.trunc(stat.mtimeMs).toString(16)}"`;
-  const cc = cacheControl(ext, url);
-  const headers = { 'Cache-Control': cc, ETag: etag };
-  if (cc.includes('no-store')) {
-    headers['Pragma'] = 'no-cache';
-    headers['Expires'] = '0';
-  }
-  // Без Vary кэш-посредник отдал бы webp тому, кто его не понимает.
-  if (canWebp) headers.Vary = 'Accept';
-
-  if (req.headers['if-none-match'] === etag) {
-    res.writeHead(304, headers);
-    return res.end();
-  }
-
-  headers['Content-Type'] = MIME[ext] || 'application/octet-stream';
-  res.writeHead(200, headers);
-  fs.createReadStream(file).pipe(res);
 });
+
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Аквариумы: http://localhost:${PORT}/`);

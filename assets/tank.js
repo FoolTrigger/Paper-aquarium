@@ -69,10 +69,20 @@
     if (opts.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
     var p = pass(opts.tank || id);
     if (p) headers['X-Tank-Pass'] = p;
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timeoutMs = opts.timeout || 25000;
+    var timeoutId = controller ? setTimeout(function () { controller.abort(); }, timeoutMs) : null;
     return fetch(url, {
       method: opts.method || (opts.body ? 'POST' : 'GET'),
       headers: headers,
-      body: opts.body
+      body: opts.body,
+      signal: controller ? controller.signal : undefined
+    }).then(function (r) {
+      if (timeoutId) clearTimeout(timeoutId);
+      return r;
+    }, function (err) {
+      if (timeoutId) clearTimeout(timeoutId);
+      throw err;
     });
   }
 

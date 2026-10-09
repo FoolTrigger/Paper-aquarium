@@ -434,8 +434,18 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: name })
         })
-          .then(function (r) { return r.json(); })
+          .then(function (r) {
+            if (!r.ok) {
+              return r.json().catch(function () { return {}; }).then(function (err) {
+                throw new Error((err && err.error) || ('HTTP ' + r.status));
+              });
+            }
+            return r.json();
+          })
           .then(function (meta) {
+            if (!meta || !meta.id) {
+              throw new Error('Некорректный ответ сервера');
+            }
             Tank.remember(meta.id);
             // Пароль сервер показывает один раз. На этом устройстве он
             // остаётся в браузере, так что переспрашивать его тут не будут —
@@ -451,11 +461,11 @@
               okLabel: I18N.t('home.created.ok')
             }).then(function () { location.href = '/t/' + meta.id; });
           })
-          .catch(function () {
+          .catch(function (err) {
             b.disabled = false;
             Modal.alert({
               title: I18N.t('home.create.fail.title'),
-              text: I18N.t('home.create.fail.text')
+              text: (err && err.message) ? err.message : I18N.t('home.create.fail.text')
             });
           });
       });

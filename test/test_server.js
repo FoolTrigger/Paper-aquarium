@@ -112,6 +112,12 @@ async function runTests() {
     const resQr = await request('GET', '/qr');
     assert('GET /qr serves qr.html page', resQr.status === 200 && resQr.body.includes('Вход с телефона'), resQr.status);
 
+    const resCapPage = await request('GET', '/capture.html');
+    assert('GET /capture.html serves capture page', resCapPage.status === 200 && resCapPage.body.includes('capture.js'), resCapPage.status);
+
+    const resAdminPage = await request('GET', '/admin.html');
+    assert('GET /admin.html serves admin page', resAdminPage.status === 200 && resAdminPage.body.includes('three-bootstrap.js'), resAdminPage.status);
+
 
     // 2. Security and DoS resilience
     console.log('\n2. Security and DoS Resilience:');
@@ -142,6 +148,16 @@ async function runTests() {
       const resMeta = await request('GET', `/api/t/${tankId}/meta`);
       assert('GET /api/t/:id/meta returns public metadata', resMeta.status === 200 && resMeta.json.id === tankId && resMeta.json.locked === true, resMeta.body);
 
+      // Tank pages and routes (prevent 404 regressions for capture and admin in portable/installed builds)
+      const resTankPage = await request('GET', `/t/${tankId}`);
+      assert('GET /t/:id serves realistic aquarium page', resTankPage.status === 200 && resTankPage.body.includes('canvas'), resTankPage.status);
+
+      const resTankCapture = await request('GET', `/t/${tankId}/capture`);
+      assert('GET /t/:id/capture serves fish capture page', resTankCapture.status === 200 && resTankCapture.body.includes('capture.js'), resTankCapture.status);
+
+      const resTankAdmin = await request('GET', `/t/${tankId}/admin`);
+      assert('GET /t/:id/admin serves tank admin page', resTankAdmin.status === 200 && resTankAdmin.body.includes('three-bootstrap.js'), resTankAdmin.status);
+
       const resSettings = await request('GET', `/api/t/${tankId}/settings`);
       assert('GET /api/t/:id/settings returns default settings', resSettings.status === 200 && resSettings.json.bgKind === 'file', resSettings.body);
 
@@ -161,12 +177,28 @@ async function runTests() {
         resUpdateSettings.body
       );
 
+      // Decor settings update and persistence
+      const decorData = { weed: false, bubbles: true, caustics: false };
+      const resDecor = await request('POST', `/api/t/${tankId}/settings`, {
+        body: { decor: decorData }
+      });
+      assert('POST /api/t/:id/settings persists decor settings',
+        resDecor.status === 200 && resDecor.json.decor && resDecor.json.decor.weed === false && resDecor.json.decor.bubbles === true,
+        resDecor.body
+      );
+      const resGetDecor = await request('GET', `/api/t/${tankId}/settings`);
+      assert('GET /api/t/:id/settings returns persisted decor settings',
+        resGetDecor.status === 200 && resGetDecor.json.decor && resGetDecor.json.decor.caustics === false,
+        resGetDecor.body
+      );
+
       // Feed
       const resFeed = await request('POST', `/api/t/${tankId}/feed`);
       assert('POST /api/t/:id/feed registers feeding time', resFeed.status === 200 && resFeed.json.ok, resFeed.body);
 
       // Add painted fish
       const tinyPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const tinyJpeg = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=';
       const resAddFish = await request('POST', `/api/t/${tankId}/fish`, {
         body: { kind: 'clownfish', texture: tinyPng, name: 'Bubbles' }
       });
@@ -207,6 +239,9 @@ async function runTests() {
       assert('POST /api/t/:id/backgrounds uploads custom background', resBgUpload.status === 200 && resBgUpload.json.name, resBgUpload.body);
       if (resBgUpload.json && resBgUpload.json.name) {
         const bgName = resBgUpload.json.name;
+        const resBgStatic = await request('GET', `/data/tanks/${tankId}/backgrounds/${bgName}`);
+        assert('GET /data/tanks/:id/backgrounds/:name serves custom background from DATA_DIR', resBgStatic.status === 200, resBgStatic.status);
+
         await request('POST', `/api/t/${tankId}/settings`, {
           body: { background: bgName, bgKind: 'file', bgShaderId: 'particles' }
         });
@@ -219,6 +254,19 @@ async function runTests() {
           resSettingsAfter.body
         );
       }
+
+      // Tank preview snapshot and DATA_DIR static serving
+      const resPrevUpload = await request('POST', `/api/t/${tankId}/preview`, {
+        body: { image: tinyJpeg }
+      });
+      assert('POST /api/t/:id/preview saves preview snapshot', resPrevUpload.status === 200 && resPrevUpload.json.ok, resPrevUpload.body);
+
+      const resPrevGet = await request('GET', `/data/tanks/${tankId}/preview.jpg`);
+      assert('GET /data/tanks/:id/preview.jpg serves snapshot from DATA_DIR', resPrevGet.status === 200, resPrevGet.status);
+
+      // Traversal protection in DATA_DIR
+      const resDataTrav = await request('GET', `/data/tanks/${tankId}/../../../server.js`);
+      assert('Directory traversal on /data/ blocked with 404', resDataTrav.status === 404, resDataTrav.status);
 
       // Delete tank
       const resDelTank = await request('DELETE', `/api/t/${tankId}`, {

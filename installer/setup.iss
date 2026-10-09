@@ -53,10 +53,7 @@ Source: "..\runtime\node.exe"; DestDir: "{app}\runtime"; Flags: ignoreversion
 ; Исходные файлы сервера и статики
 Source: "..\server.js"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\package.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\index.html"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\print.html"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\terms.html"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\qr.html"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\*.html"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Ресурсы и ассеты
 Source: "..\assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubdirs createallsubdirs

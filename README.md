@@ -13,18 +13,83 @@ A4 colouring sheet  →  phone photo  →  texture  →  3D fish in the scene
 The server is plain Node with zero dependencies, the scene is three.js, and
 everything the game owns lives in `data/`.
 
-![An aquarium with fish coloured by a child](docs/screenshots/aquarium.jpg)
+<p align="center">
+  <a href="assets/coloring/raskraski.en.pdf">
+    <img src="https://img.shields.io/badge/Download_coloring_pages-(PDF)-2ea44f?style=for-the-badge&logo=adobeacrobatreader&logoColor=white" alt="Скачать раскраски">
+  </a>
+</p>
 
-| | |
-|---|---|
-| ![The aquarium menu](docs/screenshots/menu.jpg) | ![The capture screen](docs/screenshots/capture.jpg) |
-| Tap anywhere — a menu with every road out | The sheet is photographed right there, in a frame |
-| ![Colouring sheets](docs/screenshots/print.jpg) | ![Fish from the pack](docs/screenshots/pack.jpg) |
-| Ready-to-print A4 sheets with corner markers | 7 free 3D fish included out of the box |
+<p align="center">
+  <img src="docs/screenshots/aquarium.jpg" alt="An aquarium with fish coloured by a child" width="700">
+</p>
 
-More: [the list of fish with their drawings](docs/screenshots/fish-list.jpg),
-[choosing a background](docs/screenshots/backgrounds.jpg),
-[the list of aquariums](docs/screenshots/home.jpg).
+<div align="center">
+
+  <!-- Основные 4 экрана (2x2) -->
+  <table align="center">
+    <tr>
+      <th align="center">The aquarium menu</th>
+      <th align="center">The capture screen</th>
+    </tr>
+    <tr>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/menu.jpg" height="320" alt="The aquarium menu">
+        <br><br>
+        <sub>Tap anywhere — a menu with every road out</sub>
+      </td>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/capture.jpg" height="320" alt="The capture screen">
+        <br><br>
+        <sub>The sheet is photographed right there, in a frame</sub>
+      </td>
+    </tr>
+    <tr>
+      <th align="center">Colouring sheets</th>
+      <th align="center">Fish from the pack</th>
+    </tr>
+    <tr>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/print.jpg" height="320" alt="Colouring sheets">
+        <br><br>
+        <sub>Ready-to-print A4 sheets with corner markers</sub>
+      </td>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/pack.jpg" height="320" alt="Fish from the pack">
+        <br><br>
+        <sub>7 free 3D fish included out of the box</sub>
+      </td>
+    </tr>
+  </table>
+
+  <br>
+
+  <!-- Дополнительные 3 экрана (3 в ряд) -->
+  <table align="center">
+    <tr>
+      <th align="center">Fish list</th>
+      <th align="center">Backgrounds</th>
+      <th align="center">Aquarium list</th>
+    </tr>
+    <tr>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/fish-list.jpg" height="240" alt="Fish list">
+        <br><br>
+        <sub>The list of fish with their drawings</sub>
+      </td>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/backgrounds.jpg" height="240" alt="Choosing a background">
+        <br><br>
+        <sub>Choosing a background</sub>
+      </td>
+      <td align="center" valign="top">
+        <img src="docs/screenshots/home.jpg" height="240" alt="The list of aquariums">
+        <br><br>
+        <sub>The list of aquariums</sub>
+      </td>
+    </tr>
+  </table>
+
+</div>
 
 ## Key Features & Technologies
 

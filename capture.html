@@ -764,16 +764,14 @@
     applyBoost();   // страховка: rAF мог не успеть — уходит то, что на ползунке
     document.getElementById('busy-text').textContent = I18N.t('cap.sending');
     show('s-busy');
-    return fetch(Tank.api + '/fish', {
+    return Tank.send(Tank.api + '/fish', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      // текстура запекается с текущим положением ползунка — в аквариум
-      // уплывает то, что человек видел на превью
       body: JSON.stringify({
         kind: result.kind,
         name: document.getElementById('p-petname').value,
         texture: result.boost ? result.boost.bake().texture : result.texture
-      })
+      }),
+      timeout: 25000
     }).then(function (r) {
       if (!r.ok) throw new Error(I18N.t('cap.err.status', { code: r.status }));
       return r.json();

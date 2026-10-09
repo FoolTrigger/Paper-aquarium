@@ -84,10 +84,9 @@ New-Item -ItemType Directory -Path $portableStaging -Force | Out-Null
 Copy-Item (Join-Path $rootDir "PaperAquarium.exe") $portableStaging -Force
 Copy-Item (Join-Path $rootDir "server.js") $portableStaging -Force
 Copy-Item (Join-Path $rootDir "package.json") $portableStaging -Force
-Copy-Item (Join-Path $rootDir "index.html") $portableStaging -Force
-Copy-Item (Join-Path $rootDir "print.html") $portableStaging -Force
-Copy-Item (Join-Path $rootDir "terms.html") $portableStaging -Force
-Copy-Item (Join-Path $rootDir "qr.html") $portableStaging -Force
+Get-ChildItem -Path $rootDir -Filter "*.html" | ForEach-Object {
+    Copy-Item $_.FullName $portableStaging -Force
+}
 
 
 $portableRuntime = Join-Path $portableStaging "runtime"

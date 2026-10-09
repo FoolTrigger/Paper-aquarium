@@ -331,6 +331,7 @@ namespace PaperAquarium
             psi.RedirectStandardError = true;
 
             psi.EnvironmentVariables["PORT"] = serverPort.ToString();
+            psi.EnvironmentVariables["AQUA_DATA_DIR"] = dataDir;
             if (File.Exists(Path.Combine(baseDir, "portable.txt")))
             {
                 psi.EnvironmentVariables["AQUA_PORTABLE"] = "1";
@@ -357,7 +358,43 @@ namespace PaperAquarium
                     }
                 };
 
+                // ВАЖНО: Асинхронно вычитываем stdout и stderr child-процесса,
+                // иначе переполнение внутреннего буфера pipe (4 КБ в Windows)
+                // намертво блокирует console.log в Node.js и вешает сервер!
+                string logPath = Path.Combine(dataDir, "server.log");
+                object logLock = new object();
+
+                Action<string> appendLog = (line) =>
+                {
+                    if (string.IsNullOrEmpty(line)) return;
+                    try
+                    {
+                        lock (logLock)
+                        {
+                            if (!Directory.Exists(dataDir)) Directory.CreateDirectory(dataDir);
+                            FileInfo fi = new FileInfo(logPath);
+                            if (fi.Exists && fi.Length > 5 * 1024 * 1024)
+                            {
+                                File.Delete(logPath);
+                            }
+                            File.AppendAllText(logPath, "[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "] " + line + Environment.NewLine, Encoding.UTF8);
+                        }
+                    }
+                    catch { }
+                };
+
+                serverProcess.OutputDataReceived += (s, e) =>
+                {
+                    if (e.Data != null) appendLog(e.Data);
+                };
+                serverProcess.ErrorDataReceived += (s, e) =>
+                {
+                    if (e.Data != null) appendLog("[ERROR] " + e.Data);
+                };
+
                 serverProcess.Start();
+                serverProcess.BeginOutputReadLine();
+                serverProcess.BeginErrorReadLine();
             }
             catch (Exception ex)
             {
