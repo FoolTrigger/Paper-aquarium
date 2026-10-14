@@ -127,7 +127,7 @@
 
 ```bash
 # Клонирование репозитория
-git clone https://github.com/your-username/paper-aquarium.git
+git clone https://github.com/FoolTrigger/Paper-aquarium.git
 cd paper-aquarium
 
 # Запуск сервера (требуется Node 18+, внешних зависимостей нет)
