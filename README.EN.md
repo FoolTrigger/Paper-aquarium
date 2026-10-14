@@ -127,7 +127,7 @@ No programming knowledge, Node.js or installation steps required!
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/paper-aquarium.git
+git clone https://github.com/FoolTrigger/Paper-aquarium.git
 cd paper-aquarium
 
 # Start the server (Node 18+ required, 0 external dependencies!)
